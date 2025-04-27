@@ -1,0 +1,44 @@
+import socket
+import http.server
+import socketserver
+
+# Define internal network (example: 192.168.x.x is considered internal)
+INTERNAL_NETWORK = "192.168."
+
+# DNS Responses for different networks
+INTERNAL_DNS = "dns.internal.local"
+EXTERNAL_DNS = "dns.external.com"
+
+class SplitBrainHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        """Handle incoming HTTP GET requests."""
+        client_ip = self.client_address[0]
+
+        # Determine which DNS response to return
+        if client_ip.startswith(INTERNAL_NETWORK):
+            response = f"Internal DNS: {INTERNAL_DNS}"
+        else:
+            response = f"External DNS: {EXTERNAL_DNS}"
+
+        # Send HTTP Response
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(response.encode())
+
+        # Log request
+        print(f"Request from {client_ip} → {response}")
+
+def run_server(port=80):
+    """Start HTTP server on port 80."""
+    with socketserver.TCPServer(("", port), SplitBrainHandler) as httpd:
+        print(f"Listening on port {port} for incoming requests...")
+        httpd.serve_forever()
+
+if __name__ == "__main__":
+    try:
+        run_server()
+    except PermissionError:
+        print("Error: Port 80 requires sudo/root privileges.")
+    except KeyboardInterrupt:
+        print("\nServer shutting down.")
